@@ -7,6 +7,7 @@ describe("route matcher", () => {
     expect(matchRoute("/topics")).toEqual({ name: "topics" });
     expect(matchRoute("/topics/ai-workflows")).toEqual({ name: "topic", slug: "ai-workflows" });
     expect(matchRoute("/materials")).toEqual({ name: "materials" });
+    expect(matchRoute("/cloud")).toEqual({ name: "cloud" });
     expect(matchRoute("/signals/bun-native-react-server")).toEqual({
       name: "signal",
       slug: "bun-native-react-server"
@@ -15,6 +16,7 @@ describe("route matcher", () => {
     expect(matchRoute("/feed.xml")).toEqual({ name: "feed" });
     expect(matchRoute("/api/signals.json")).toEqual({ name: "api-signals" });
     expect(matchRoute("/api/material-quality.json")).toEqual({ name: "api-material-quality" });
+    expect(matchRoute("/api/cloud.json")).toEqual({ name: "api-cloud" });
   });
 
   test("normalizes trailing slashes", () => {

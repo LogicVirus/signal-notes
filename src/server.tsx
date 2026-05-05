@@ -16,7 +16,8 @@ import { renderDocument } from "./render";
 import { matchRoute } from "./router";
 import { getFeedSignals, type FetchLike } from "./services/feed-service";
 import { renderRss } from "./services/rss";
-import { HomePage, MaterialsPage, NotFoundPage, SignalPage, SourcesPage, TopicPage, TopicsPage } from "./ui/components";
+import { buildSignalCloud } from "./services/signal-cloud";
+import { HomePage, MaterialsPage, NotFoundPage, SignalCloudPage, SignalPage, SourcesPage, TopicPage, TopicsPage } from "./ui/components";
 
 type RequestHandlerOptions = {
   siteUrl?: string;
@@ -90,6 +91,25 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
       });
     }
 
+    if (route.name === "api-cloud") {
+      const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
+      const graph = buildSignalCloud({
+        signals: signalSet.signals,
+        topics,
+        sources,
+        indicators: materialQualityIndicators,
+        materials: trackedMaterials,
+        generatedAt: signalSet.refreshedAt
+      });
+
+      return jsonResponse({
+        site: "Signal Notes",
+        refreshedAt: signalSet.refreshedAt,
+        feedErrors: signalSet.feedErrors,
+        graph
+      });
+    }
+
     if (route.name === "feed") {
       const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
       return new Response(renderRss(signalSet.signals, appBaseUrl(siteUrl, basePath)), {
@@ -155,6 +175,29 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
             basePath
           }
         )
+      );
+    }
+
+    if (route.name === "cloud") {
+      const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
+      const graph = buildSignalCloud({
+        signals: signalSet.signals,
+        topics,
+        sources,
+        indicators: materialQualityIndicators,
+        materials: trackedMaterials,
+        generatedAt: signalSet.refreshedAt
+      });
+
+      return htmlResponse(
+        renderDocument(<SignalCloudPage graph={graph} feedErrors={signalSet.feedErrors} />, {
+          title: "Signal Cloud",
+          description:
+            "A dense weighted signal cloud connecting notes, topics, sources, material indicators, and recurring tags.",
+          path: "/cloud",
+          siteUrl,
+          basePath
+        })
       );
     }
 

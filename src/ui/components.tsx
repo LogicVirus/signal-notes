@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { MaterialQualityIndicator, PublicSignal, Source, Topic, TrackedMaterial } from "../content/types";
 import { withBasePath } from "../paths";
+import type { SignalCloudGraph, SignalCloudLink, SignalCloudNode } from "../services/signal-cloud";
 
 const dateFormatter = new Intl.DateTimeFormat("en", {
   month: "short",
@@ -24,6 +25,7 @@ export function PageShell({ children, basePath = "" }: { children: ReactNode; ba
           </a>
           <nav className="site-nav" aria-label="Primary navigation">
             <a href={appPath("/materials")}>Materials</a>
+            <a href={appPath("/cloud")}>Cloud</a>
             <a href={appPath("/topics")}>Topics</a>
             <a href={appPath("/sources")}>Sources</a>
             <a href={appPath("/feed.xml")}>RSS</a>
@@ -93,9 +95,14 @@ export function HomePage({
             <IndicatorMini indicator={indicator} key={indicator.slug} />
           ))}
         </div>
-        <a className="source-link" href={appPath("/materials")}>
-          Open materials tracker
-        </a>
+        <div className="section-actions">
+          <a className="source-link" href={appPath("/materials")}>
+            Open materials tracker
+          </a>
+          <a className="source-link secondary-link" href={appPath("/cloud")}>
+            Open signal cloud
+          </a>
+        </div>
         <p className="preview-note">{materials.length} material families are in the starter watchlist.</p>
       </section>
 
@@ -225,9 +232,14 @@ export function MaterialsPage({
             <p className="eyebrow">Leading indicators</p>
             <h2 id="indicator-title">Quality stats to watch</h2>
           </div>
-          <a className="source-link" href={appPath("/api/material-quality.json")}>
-            JSON endpoint
-          </a>
+          <div className="section-actions">
+            <a className="source-link" href={appPath("/api/material-quality.json")}>
+              JSON endpoint
+            </a>
+            <a className="source-link secondary-link" href={appPath("/cloud")}>
+              Signal cloud
+            </a>
+          </div>
         </div>
         <div className="indicator-grid">
           {indicators.map((indicator) => (
@@ -262,6 +274,171 @@ export function MaterialsPage({
             <SignalCard signal={signal} key={signal.id} />
           ))}
         </div>
+      </section>
+    </section>
+  );
+}
+
+export function SignalCloudPage({ graph, feedErrors }: { graph: SignalCloudGraph; feedErrors: string[] }) {
+  const appPath = useAppPath();
+  const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const topNodes = [...graph.nodes].sort((a, b) => b.weight - a.weight).slice(0, 9);
+  const verticalGrid = range(0, graph.width, graph.gridSize * 2);
+  const horizontalGrid = range(0, graph.height, graph.gridSize * 2);
+
+  return (
+    <section className="page-section cloud-page" aria-labelledby="cloud-title">
+      <div className="cloud-hero">
+        <div>
+          <p className="eyebrow">Signal weight cloud</p>
+          <h1 id="cloud-title">Signal weight cloud</h1>
+          <p className="lede constrained">
+            A dense circuit-map of notes, topics, sources, materials, indicators, and recurring tags, weighted by the current reference trail.
+          </p>
+          <div className="cloud-actions">
+            <a className="source-link" href={appPath("/api/cloud.json")}>
+              JSON endpoint
+            </a>
+            <a className="source-link secondary-link" href={appPath("/materials")}>
+              Materials tracker
+            </a>
+          </div>
+        </div>
+        <div className="cloud-summary" aria-label="Signal cloud summary">
+          <Stat value={graph.metrics.nodes.toString()} label="nodes" />
+          <Stat value={graph.metrics.links.toString()} label="grid links" />
+          <Stat value={graph.metrics.densityScore.toString()} label="density" />
+        </div>
+      </div>
+
+      {feedErrors.length > 0 ? (
+        <p className="feed-note materials-feed-note" role="status">
+          Some live feeds are temporarily unavailable; the cloud is using repo-authored and cached signals.
+        </p>
+      ) : null}
+
+      <section className="cloud-layout" aria-labelledby="cloud-map-title">
+        <div className="cloud-board">
+          <div className="cloud-board-heading">
+            <div>
+              <p className="eyebrow">Weighted network</p>
+              <h2 id="cloud-map-title">Grid-connected source trail</h2>
+            </div>
+            <span>{graph.metrics.liveSignals} signals indexed</span>
+          </div>
+
+          <svg
+            className="cloud-map"
+            viewBox={`0 0 ${graph.width} ${graph.height}`}
+            role="img"
+            aria-labelledby="cloud-svg-title cloud-svg-desc"
+          >
+            <title id="cloud-svg-title">Signal Notes weighted cloud</title>
+            <desc id="cloud-svg-desc">
+              Weighted nodes connected by straight grid lines across signals, topics, sources, materials, indicators, and tags.
+            </desc>
+            <g className="cloud-grid" aria-hidden="true">
+              {verticalGrid.map((x) => (
+                <line x1={x} x2={x} y1="0" y2={graph.height} key={`v-${x}`} />
+              ))}
+              {horizontalGrid.map((y) => (
+                <line x1="0" x2={graph.width} y1={y} y2={y} key={`h-${y}`} />
+              ))}
+            </g>
+            <g className="cloud-links">
+              {graph.links.map((link) => {
+                const source = nodesById.get(link.source);
+                const target = nodesById.get(link.target);
+
+                if (!source || !target) {
+                  return null;
+                }
+
+                return (
+                  <polyline
+                    className={`cloud-link ${link.kind}`}
+                    points={cloudLinkPoints(source, target, graph.gridSize)}
+                    strokeWidth={cloudLinkWidth(link)}
+                    key={link.id}
+                  />
+                );
+              })}
+            </g>
+            <g className="cloud-nodes">
+              {graph.nodes.map((node) => {
+                const showLabel = shouldShowCloudLabel(node);
+                const nodeHref = node.href ? (node.href.startsWith("/") ? appPath(node.href) : node.href) : undefined;
+                const nodeChildren = (
+                  <>
+                    <title>{`${node.label}: ${node.summary}`}</title>
+                    <circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={node.radius + 7}
+                      className="node-halo"
+                      style={{ "--node-accent": node.accent } as CSSProperties}
+                    />
+                    <circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={node.radius}
+                      className="node-core"
+                      data-weight={node.weight.toFixed(1)}
+                      style={{ "--node-accent": node.accent } as CSSProperties}
+                    />
+                    {showLabel ? (
+                      <text
+                        x={node.x}
+                        y={node.y - node.radius - 10}
+                        textAnchor="middle"
+                        className="node-label"
+                      >
+                        {shortCloudLabel(node.label, node.kind === "signal" ? 24 : 20)}
+                      </text>
+                    ) : null}
+                  </>
+                );
+
+                return nodeHref ? (
+                  <a className="cloud-node-link" href={nodeHref} key={node.id}>
+                    <g className={`cloud-node ${node.kind} ${node.status ?? ""}`}>{nodeChildren}</g>
+                  </a>
+                ) : (
+                  <g className={`cloud-node ${node.kind} ${node.status ?? ""}`} key={node.id}>
+                    {nodeChildren}
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
+        </div>
+
+        <aside className="cloud-dossier" aria-label="Cloud weights">
+          <div className="cloud-dossier-card">
+            <p className="eyebrow">Heaviest node</p>
+            <h2>{graph.metrics.strongestNode}</h2>
+            <p>The current high-gravity point in the public index, shaped by source, topic, indicator, material, tag, and cluster references.</p>
+          </div>
+          <div className="cloud-dossier-card">
+            <p className="eyebrow">Top weights</p>
+            <ol className="cloud-weight-list">
+              {topNodes.map((node) => (
+                <li key={node.id}>
+                  <span>{node.label}</span>
+                  <strong>{node.weight.toFixed(1)}</strong>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="cloud-legend" aria-label="Cloud legend">
+            <span className="legend-topic">Topic</span>
+            <span className="legend-source">Source</span>
+            <span className="legend-signal">Signal</span>
+            <span className="legend-indicator">Indicator</span>
+            <span className="legend-material">Material</span>
+            <span className="legend-tag">Tag</span>
+          </div>
+        </aside>
       </section>
     </section>
   );
@@ -526,6 +703,38 @@ function Stat({ value, label }: { value: string; label: string }) {
       <span>{label}</span>
     </div>
   );
+}
+
+function cloudLinkPoints(source: SignalCloudNode, target: SignalCloudNode, gridSize: number): string {
+  const midX = Math.round(((source.x + target.x) / 2) / gridSize) * gridSize;
+
+  return `${source.x},${source.y} ${midX},${source.y} ${midX},${target.y} ${target.x},${target.y}`;
+}
+
+function cloudLinkWidth(link: SignalCloudLink): number {
+  return Math.max(0.65, Math.min(3.2, 0.45 + link.weight * 0.42));
+}
+
+function shouldShowCloudLabel(node: SignalCloudNode): boolean {
+  return node.kind !== "tag" && (node.kind !== "signal" || node.weight >= 7.2);
+}
+
+function shortCloudLabel(label: string, maxLength: number): string {
+  if (label.length <= maxLength) {
+    return label;
+  }
+
+  return `${label.slice(0, Math.max(1, maxLength - 1)).trim()}...`;
+}
+
+function range(min: number, max: number, step: number): number[] {
+  const values: number[] = [];
+
+  for (let value = min; value <= max; value += step) {
+    values.push(value);
+  }
+
+  return values;
 }
 
 function formatDate(value: string): string {

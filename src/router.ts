@@ -3,11 +3,13 @@ export type RouteMatch =
   | { name: "topics" }
   | { name: "topic"; slug: string }
   | { name: "materials" }
+  | { name: "cloud" }
   | { name: "signal"; slug: string }
   | { name: "sources" }
   | { name: "feed" }
   | { name: "api-signals" }
   | { name: "api-material-quality" }
+  | { name: "api-cloud" }
   | { name: "asset"; path: string }
   | { name: "not-found" };
 
@@ -30,6 +32,10 @@ export function matchRoute(pathname: string): RouteMatch {
     return { name: "materials" };
   }
 
+  if (path === "/cloud") {
+    return { name: "cloud" };
+  }
+
   if (path.startsWith("/signals/")) {
     return { name: "signal", slug: path.slice("/signals/".length) };
   }
@@ -48,6 +54,10 @@ export function matchRoute(pathname: string): RouteMatch {
 
   if (path === "/api/material-quality.json") {
     return { name: "api-material-quality" };
+  }
+
+  if (path === "/api/cloud.json") {
+    return { name: "api-cloud" };
   }
 
   if (["/styles.css", "/app.js", "/favicon.svg", "/signal-notes-og.png"].includes(path)) {

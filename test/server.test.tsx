@@ -24,6 +24,7 @@ describe("public server routes", () => {
       "/topics",
       "/topics/ai-workflows",
       "/materials",
+      "/cloud",
       "/signals/bun-native-react-server",
       "/sources"
     ];
@@ -53,6 +54,26 @@ describe("public server routes", () => {
     expect(json.indicators.length).toBeGreaterThanOrEqual(8);
     expect(json.materials.length).toBeGreaterThanOrEqual(5);
     expect(json.relatedSignals[0].topicSlugs).toContain("material-quality");
+  });
+
+  test("renders and returns the signal cloud", async () => {
+    const response = await request("/cloud");
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(html).toContain("Signal weight cloud");
+    expect(html).toContain("cloud-map");
+    expect(html).toContain(`href="/api/cloud.json"`);
+    expect(html).toContain(`<link rel="canonical" href="${siteUrl}/cloud"`);
+
+    const apiResponse = await request("/api/cloud.json");
+    const json = await apiResponse.json();
+
+    expect(apiResponse.status).toBe(200);
+    expect(json.site).toBe("Signal Notes");
+    expect(json.graph.metrics.nodes).toBeGreaterThan(20);
+    expect(json.graph.metrics.links).toBeGreaterThan(30);
+    expect(json.graph.nodes.some((node: { kind: string }) => node.kind === "material")).toBe(true);
   });
 
   test("returns RSS XML", async () => {
@@ -86,6 +107,7 @@ describe("public server routes", () => {
     expect(html).toContain(`<link rel="canonical" href="${siteUrl}/signal-notes/materials"`);
     expect(html).toContain(`href="/signal-notes/topics"`);
     expect(html).toContain(`href="/signal-notes/api/material-quality.json"`);
+    expect(html).toContain(`href="/signal-notes/cloud"`);
 
     const apiResponse = await request("/signal-notes/api/material-quality.json", handler);
     const json = await apiResponse.json();
@@ -96,6 +118,17 @@ describe("public server routes", () => {
     const assetResponse = await request("/signal-notes/styles.css", handler);
     expect(assetResponse.status).toBe(200);
     expect(assetResponse.headers.get("content-type")).toContain("text/css");
+
+    const cloudResponse = await request("/signal-notes/cloud", handler);
+    const cloudHtml = await cloudResponse.text();
+    expect(cloudResponse.status).toBe(200);
+    expect(cloudHtml).toContain(`<link rel="canonical" href="${siteUrl}/signal-notes/cloud"`);
+    expect(cloudHtml).toContain(`href="/signal-notes/api/cloud.json"`);
+
+    const cloudApiResponse = await request("/signal-notes/api/cloud.json", handler);
+    const cloudJson = await cloudApiResponse.json();
+    expect(cloudApiResponse.status).toBe(200);
+    expect(cloudJson.graph.metrics.nodes).toBeGreaterThan(20);
   });
 
   test("returns 404 for unknown paths", async () => {

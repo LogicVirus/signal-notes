@@ -24,5 +24,29 @@ export const feeds: FeedConfig[] = [
     topicSlugs: ["ai-workflows", "source-trails"],
     enabled: true,
     maxItems: 4
+  },
+  {
+    slug: "nist-materials",
+    sourceSlug: "nist-materials",
+    url: "https://www.nist.gov/news-events/materials/rss.xml",
+    topicSlugs: ["material-quality", "metrology", "source-trails"],
+    enabled: true,
+    maxItems: 5
+  },
+  {
+    slug: "nist-manufacturing",
+    sourceSlug: "nist-manufacturing",
+    url: "https://www.nist.gov/news-events/manufacturing/rss.xml",
+    topicSlugs: ["material-quality", "metrology", "source-trails"],
+    enabled: true,
+    maxItems: 5
+  },
+  {
+    slug: "nasa-technology",
+    sourceSlug: "nasa-technology",
+    url: "https://www.nasa.gov/technology/feed/",
+    topicSlugs: ["material-quality", "critical-materials", "source-trails"],
+    enabled: true,
+    maxItems: 5
   }
 ];

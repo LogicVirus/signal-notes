@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import type { PublicSignal, Source, Topic } from "../content/types";
+import type { MaterialQualityIndicator, PublicSignal, Source, Topic, TrackedMaterial } from "../content/types";
 
 const dateFormatter = new Intl.DateTimeFormat("en", {
   month: "short",
@@ -16,6 +16,7 @@ export function PageShell({ children }: { children: ReactNode }) {
           <span>Signal Notes</span>
         </a>
         <nav className="site-nav" aria-label="Primary navigation">
+          <a href="/materials">Materials</a>
           <a href="/topics">Topics</a>
           <a href="/sources">Sources</a>
           <a href="/feed.xml">RSS</a>
@@ -33,13 +34,18 @@ export function PageShell({ children }: { children: ReactNode }) {
 export function HomePage({
   signals,
   topics,
+  indicators,
+  materials,
   feedErrors
 }: {
   signals: PublicSignal[];
   topics: Topic[];
+  indicators: MaterialQualityIndicator[];
+  materials: TrackedMaterial[];
   feedErrors: string[];
 }) {
   const featured = signals.filter((signal) => signal.featured).slice(0, 3);
+  const watchCount = indicators.filter((indicator) => indicator.status !== "stable").length;
 
   return (
     <>
@@ -48,12 +54,12 @@ export function HomePage({
           <p className="eyebrow">Public research desk</p>
           <h1 id="home-title">Signal Notes</h1>
           <p className="lede">
-            A compact index of tools, AI workflows, source trails, and web stack patterns worth returning to.
+            A compact index of tools, AI workflows, source trails, material quality stats, and leading-edge indicators worth returning to.
           </p>
           <div className="hero-stats" aria-label="Signal Notes index stats">
             <Stat value={signals.length.toString()} label="signals" />
             <Stat value={topics.length.toString()} label="topics" />
-            <Stat value={new Set(signals.map((signal) => signal.sourceSlug)).size.toString()} label="sources" />
+            <Stat value={watchCount.toString()} label="quality watches" />
           </div>
         </div>
         <img
@@ -63,6 +69,25 @@ export function HomePage({
           width="1200"
           height="630"
         />
+      </section>
+
+      <section className="quality-preview" aria-labelledby="quality-preview-title">
+        <div>
+          <p className="eyebrow">Material quality desk</p>
+          <h2 id="quality-preview-title">Stats that move before failure does.</h2>
+          <p>
+            Track traceability, variance, inspection coverage, critical-material exposure, and data completeness as early signals for better material decisions.
+          </p>
+        </div>
+        <div className="quality-preview-grid">
+          {indicators.slice(0, 3).map((indicator) => (
+            <IndicatorMini indicator={indicator} key={indicator.slug} />
+          ))}
+        </div>
+        <a className="source-link" href="/materials">
+          Open materials tracker
+        </a>
+        <p className="preview-note">{materials.length} material families are in the starter watchlist.</p>
       </section>
 
       <section className="workbench" aria-labelledby="signals-title">
@@ -132,6 +157,103 @@ export function HomePage({
         </div>
       </section>
     </>
+  );
+}
+
+export function MaterialsPage({
+  indicators,
+  materials,
+  signals,
+  feedErrors
+}: {
+  indicators: MaterialQualityIndicator[];
+  materials: TrackedMaterial[];
+  signals: PublicSignal[];
+  feedErrors: string[];
+}) {
+  const riskCount = indicators.filter((indicator) => indicator.status === "risk").length;
+  const watchCount = indicators.filter((indicator) => indicator.status === "watch").length;
+  const stableCount = indicators.filter((indicator) => indicator.status === "stable").length;
+  const updatedAt = indicators
+    .map((indicator) => Date.parse(indicator.updatedAt))
+    .filter((value) => !Number.isNaN(value))
+    .sort((a, b) => b - a)[0];
+
+  return (
+    <section className="page-section materials-page" aria-labelledby="materials-title">
+      <div className="materials-hero">
+        <div>
+          <p className="eyebrow">Automated quality tracker</p>
+          <h1 id="materials-title">Material quality signals</h1>
+          <p className="lede constrained">
+            A working desk for measurement quality, process drift, inspection coverage, supply exposure, and other leading indicators that should move before failures do.
+          </p>
+        </div>
+        <div className="materials-summary" aria-label="Material quality tracker summary">
+          <Stat value={indicators.length.toString()} label="indicators" />
+          <Stat value={materials.length.toString()} label="materials" />
+          <Stat value={signals.length.toString()} label="source signals" />
+        </div>
+      </div>
+
+      <div className="status-strip" aria-label="Indicator status summary">
+        <StatusPill label="Risk" value={riskCount} status="risk" />
+        <StatusPill label="Watch" value={watchCount} status="watch" />
+        <StatusPill label="Stable" value={stableCount} status="stable" />
+        <span>Updated {updatedAt ? formatDate(new Date(updatedAt).toISOString()) : "as sources refresh"}</span>
+      </div>
+
+      {feedErrors.length > 0 ? (
+        <p className="feed-note materials-feed-note" role="status">
+          Some live feeds are temporarily unavailable; manual indicators are still shown.
+        </p>
+      ) : null}
+
+      <section className="quality-section" aria-labelledby="indicator-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Leading indicators</p>
+            <h2 id="indicator-title">Quality stats to watch</h2>
+          </div>
+          <a className="source-link" href="/api/material-quality.json">
+            JSON endpoint
+          </a>
+        </div>
+        <div className="indicator-grid">
+          {indicators.map((indicator) => (
+            <IndicatorCard indicator={indicator} key={indicator.slug} />
+          ))}
+        </div>
+      </section>
+
+      <section className="quality-section" aria-labelledby="materials-watchlist-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Material watchlist</p>
+            <h2 id="materials-watchlist-title">Families worth tracking first</h2>
+          </div>
+        </div>
+        <div className="material-grid">
+          {materials.map((material) => (
+            <MaterialCard material={material} indicators={indicators} key={material.slug} />
+          ))}
+        </div>
+      </section>
+
+      <section className="quality-section" aria-labelledby="quality-source-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Automated source trail</p>
+            <h2 id="quality-source-title">Latest material-adjacent signals</h2>
+          </div>
+        </div>
+        <div className="signal-list">
+          {signals.slice(0, 8).map((signal) => (
+            <SignalCard signal={signal} key={signal.id} />
+          ))}
+        </div>
+      </section>
+    </section>
   );
 }
 
@@ -271,6 +393,96 @@ function SignalCard({ signal, compact = false }: { signal: PublicSignal; compact
         <a href={href}>{signal.origin === "manual" ? "Read note" : "Open source"}</a>
       </div>
     </article>
+  );
+}
+
+function IndicatorMini({ indicator }: { indicator: MaterialQualityIndicator }) {
+  return (
+    <article className="indicator-mini">
+      <span className={`status-dot ${indicator.status}`} aria-hidden="true" />
+      <div>
+        <h3>{indicator.value}{indicator.unit ? ` ${indicator.unit}` : ""}</h3>
+        <p>{indicator.title}</p>
+      </div>
+    </article>
+  );
+}
+
+function IndicatorCard({ indicator }: { indicator: MaterialQualityIndicator }) {
+  return (
+    <article className={`indicator-card ${indicator.status}`}>
+      <div className="card-topline">
+        <span>{indicator.category}</span>
+        <span>{indicator.trend}</span>
+      </div>
+      <div className="indicator-value">
+        <strong>
+          {indicator.value}
+          {indicator.unit ? <span>{indicator.unit}</span> : null}
+        </strong>
+        <small>target {indicator.target}</small>
+      </div>
+      <h3>{indicator.title}</h3>
+      <p>{indicator.summary}</p>
+      <p className="why-it-matters">{indicator.whyItMatters}</p>
+      <div className="card-footer">
+        <span>{indicator.cadence}</span>
+        <span className={`status-label ${indicator.status}`}>{indicator.status}</span>
+      </div>
+    </article>
+  );
+}
+
+function MaterialCard({
+  material,
+  indicators
+}: {
+  material: TrackedMaterial;
+  indicators: MaterialQualityIndicator[];
+}) {
+  const linkedIndicators = material.indicatorSlugs
+    .map((slug) => indicators.find((indicator) => indicator.slug === slug))
+    .filter(Boolean) as MaterialQualityIndicator[];
+
+  return (
+    <article className="material-card">
+      <p className="source-type">{material.family}</p>
+      <h3>{material.name}</h3>
+      <p>{material.summary}</p>
+      <div className="quality-stat-list">
+        {material.qualityStats.map((stat) => (
+          <div className="quality-stat" key={stat.label}>
+            <span>{stat.label}</span>
+            <strong>{stat.value}{stat.unit ? ` ${stat.unit}` : ""}</strong>
+            <span className={`status-label ${stat.status}`}>{stat.status}</span>
+          </div>
+        ))}
+      </div>
+      <div>
+        <p className="mini-heading">Leading indicators</p>
+        <ul className="leading-list">
+          {material.leadingIndicators.map((indicator) => (
+            <li key={indicator}>{indicator}</li>
+          ))}
+        </ul>
+      </div>
+      <div className="topic-row">
+        {linkedIndicators.map((indicator) => (
+          <span className={`status-label ${indicator.status}`} key={indicator.slug}>
+            {indicator.title}
+          </span>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function StatusPill({ label, value, status }: { label: string; value: number; status: "risk" | "watch" | "stable" }) {
+  return (
+    <span className={`status-pill ${status}`}>
+      <strong>{value}</strong>
+      {label}
+    </span>
   );
 }
 

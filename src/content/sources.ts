@@ -40,5 +40,54 @@ export const sources: Source[] = [
     url: "https://github.blog",
     description: "Developer platform news, release notes, workflow patterns, and ecosystem updates.",
     topicSlugs: ["developer-tools", "source-trails"]
+  },
+  {
+    slug: "nist-materials",
+    name: "NIST Materials",
+    type: "site",
+    url: "https://www.nist.gov/news-events/materials",
+    description: "NIST materials news and research updates for measurement science, standards, and material behavior.",
+    topicSlugs: ["material-quality", "metrology", "source-trails"]
+  },
+  {
+    slug: "nist-manufacturing",
+    name: "NIST Manufacturing",
+    type: "site",
+    url: "https://www.nist.gov/news-events/manufacturing",
+    description: "Manufacturing research and standards updates that can reveal process quality and inspection trends.",
+    topicSlugs: ["material-quality", "metrology", "source-trails"]
+  },
+  {
+    slug: "nist-srm",
+    name: "NIST Standard Reference Materials",
+    type: "docs",
+    url: "https://www.nist.gov/srm",
+    description: "Reference material catalog and program context for traceable calibration and measurement confidence.",
+    topicSlugs: ["material-quality", "metrology", "source-trails"]
+  },
+  {
+    slug: "doe-ammto",
+    name: "DOE AMMTO",
+    type: "site",
+    url: "https://www.energy.gov/cmei/ammto/advanced-materials-and-manufacturing-technologies-office",
+    description:
+      "Advanced materials, manufacturing, critical minerals, and supply-chain program signals from the U.S. Department of Energy.",
+    topicSlugs: ["critical-materials", "material-quality", "source-trails"]
+  },
+  {
+    slug: "materials-project",
+    name: "Materials Project",
+    type: "docs",
+    url: "https://docs.materialsproject.org/downloading-data/using-the-api",
+    description: "Materials data API documentation for querying computed structures, properties, and provenance fields.",
+    topicSlugs: ["material-quality", "data-quality", "source-trails"]
+  },
+  {
+    slug: "nasa-technology",
+    name: "NASA Technology",
+    type: "site",
+    url: "https://www.nasa.gov/technology/",
+    description: "NASA technology updates that often surface early aerospace materials, inspection, and reliability signals.",
+    topicSlugs: ["material-quality", "critical-materials", "source-trails"]
   }
 ];

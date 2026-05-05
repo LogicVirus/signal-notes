@@ -10,6 +10,7 @@ The v1 surface is intentionally small:
 - repo-authored typed content
 - RSS/Atom feed ingestion with cache and graceful fallback
 - JSON and RSS public interfaces
+- material quality stats and leading-edge indicator tracking
 - Bun tests for content, routing, feeds, and core pages
 
 ## Requirements
@@ -40,7 +41,24 @@ The dev server defaults to [http://localhost:3001](http://localhost:3001) so it 
 - `/`
 - `/topics`
 - `/topics/:slug`
+- `/materials`
 - `/signals/:slug`
 - `/sources`
 - `/feed.xml`
 - `/api/signals.json`
+- `/api/material-quality.json`
+
+## Material quality tracker
+
+The `/materials` route tracks repo-authored baseline indicators for:
+
+- calibration traceability
+- lot-to-lot variance drift
+- process capability
+- non-destructive inspection coverage
+- critical material exposure
+- digital thread completeness
+- scrap/rework rate
+- accelerated-aging evidence
+
+It also pulls automated source context through RSS feeds from NIST Materials, NIST Manufacturing, and NASA Technology. The JSON endpoint is intentionally simple so future connectors can replace the starter baselines with live sensor, supplier, spreadsheet, or materials API data.

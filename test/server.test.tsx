@@ -14,6 +14,7 @@ describe("public server routes", () => {
 
     expect(response.status).toBe(200);
     expect(html).toContain("<h1 id=\"home-title\">Signal Notes</h1>");
+    expect(html).toContain("Material quality desk");
     expect(html).toContain("data-signal-search");
     expect(html).toContain(`<link rel="canonical" href="${siteUrl}/"`);
   });
@@ -22,6 +23,7 @@ describe("public server routes", () => {
     const paths = [
       "/topics",
       "/topics/ai-workflows",
+      "/materials",
       "/signals/bun-native-react-server",
       "/sources"
     ];
@@ -41,6 +43,16 @@ describe("public server routes", () => {
     expect(json.site).toBe("Signal Notes");
     expect(json.count).toBeGreaterThanOrEqual(5);
     expect(json.signals[0].origin).toBe("manual");
+  });
+
+  test("returns material quality JSON", async () => {
+    const response = await request("/api/material-quality.json");
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.indicators.length).toBeGreaterThanOrEqual(8);
+    expect(json.materials.length).toBeGreaterThanOrEqual(5);
+    expect(json.relatedSignals[0].topicSlugs).toContain("material-quality");
   });
 
   test("returns RSS XML", async () => {

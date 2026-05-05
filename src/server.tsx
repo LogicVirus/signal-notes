@@ -1,12 +1,21 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { getManualSignals, getSignal, getTopic, sources, topics, validateContent } from "./content";
+import {
+  getManualSignals,
+  getSignal,
+  getTopic,
+  materialQualityIndicators,
+  sources,
+  topics,
+  trackedMaterials,
+  validateContent
+} from "./content";
 import type { PublicSignal } from "./content/types";
 import { renderDocument } from "./render";
 import { matchRoute } from "./router";
 import { getFeedSignals, type FetchLike } from "./services/feed-service";
 import { renderRss } from "./services/rss";
-import { HomePage, NotFoundPage, SignalPage, SourcesPage, TopicPage, TopicsPage } from "./ui/components";
+import { HomePage, MaterialsPage, NotFoundPage, SignalPage, SourcesPage, TopicPage, TopicsPage } from "./ui/components";
 
 type RequestHandlerOptions = {
   siteUrl?: string;
@@ -52,6 +61,19 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
       });
     }
 
+    if (route.name === "api-material-quality") {
+      const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
+
+      return jsonResponse({
+        site: "Signal Notes",
+        refreshedAt: signalSet.refreshedAt,
+        feedErrors: signalSet.feedErrors,
+        indicators: materialQualityIndicators,
+        materials: trackedMaterials,
+        relatedSignals: getMaterialSignals(signalSet.signals)
+      });
+    }
+
     if (route.name === "feed") {
       const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
       return new Response(renderRss(signalSet.signals, siteUrl), {
@@ -65,12 +87,22 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
     if (route.name === "home") {
       const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
       return htmlResponse(
-        renderDocument(<HomePage signals={signalSet.signals} topics={topics} feedErrors={signalSet.feedErrors} />, {
-          title: "Signal Notes",
-          description: "A public index of tools, AI workflows, source trails, and practical web stack notes.",
-          path: "/",
-          siteUrl
-        })
+        renderDocument(
+          <HomePage
+            signals={signalSet.signals}
+            topics={topics}
+            indicators={materialQualityIndicators}
+            materials={trackedMaterials}
+            feedErrors={signalSet.feedErrors}
+          />,
+          {
+            title: "Signal Notes",
+            description:
+              "A public index of tools, AI workflows, source trails, material quality stats, and leading-edge indicators.",
+            path: "/",
+            siteUrl
+          }
+        )
       );
     }
 
@@ -83,6 +115,27 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
           path: "/topics",
           siteUrl
         })
+      );
+    }
+
+    if (route.name === "materials") {
+      const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
+
+      return htmlResponse(
+        renderDocument(
+          <MaterialsPage
+            indicators={materialQualityIndicators}
+            materials={trackedMaterials}
+            signals={getMaterialSignals(signalSet.signals)}
+            feedErrors={signalSet.feedErrors}
+          />,
+          {
+            title: "Materials",
+            description: "Material quality stats, watch materials, source trails, and leading-edge indicators.",
+            path: "/materials",
+            siteUrl
+          }
+        )
       );
     }
 
@@ -136,6 +189,12 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
 
     return notFound(siteUrl, url.pathname);
   };
+}
+
+function getMaterialSignals(signals: PublicSignal[]): PublicSignal[] {
+  const materialTopics = new Set(["material-quality", "critical-materials", "metrology", "data-quality"]);
+
+  return signals.filter((signal) => signal.topicSlugs.some((topicSlug) => materialTopics.has(topicSlug))).slice(0, 18);
 }
 
 export function createServer(options: ServerOptions = {}) {

@@ -1,4 +1,4 @@
-import { createRequestHandler } from "../src/server";
+import { createRequestHandler } from "../src/server.tsx";
 
 const handler = createRequestHandler({
   siteUrl: process.env.SITE_URL ?? "https://spacestatic.info",

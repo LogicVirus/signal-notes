@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   getManualSignals,
@@ -282,7 +282,7 @@ function serveAsset(pathname: string): Response {
   }
 
   const extension = pathname.match(/\.[a-z0-9]+$/)?.[0] ?? "";
-  return new Response(Bun.file(filePath), {
+  return new Response(readFileSync(filePath), {
     headers: {
       "content-type": assetTypes.get(extension) ?? "application/octet-stream",
       "cache-control": extension === ".png" ? "public, max-age=31536000, immutable" : "public, max-age=60"

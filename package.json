@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "bun --watch src/server.tsx",
     "start": "bun src/server.tsx",
-    "build": "bun build src/server.tsx --target=bun --outdir=dist --external react --external react-dom",
+    "build": "bun build src/server.tsx --target=node --outdir=dist --production --external react --external react-dom",
     "generate:og": "bun scripts/generate-og.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

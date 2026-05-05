@@ -1,6 +1,11 @@
 {
   "installCommand": "bun install",
-  "buildCommand": "bun run typecheck",
+  "buildCommand": "bun run typecheck && bun run build",
+  "functions": {
+    "api/signal.js": {
+      "includeFiles": "{dist/server.js,public/**}"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

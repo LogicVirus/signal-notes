@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Fixture Source</title>
+    <link>https://example.com</link>
+    <description>Fixture feed</description>
+    <item>
+      <title>New agent workflow notes</title>
+      <link>https://example.com/agent-workflow</link>
+      <pubDate>Mon, 04 May 2026 18:00:00 GMT</pubDate>
+      <description><![CDATA[<p>A short note about feed-driven workflow tracking.</p>]]></description>
+    </item>
+  </channel>
+</rss>

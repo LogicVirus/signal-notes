@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Atom Fixture</title>
+  <entry>
+    <title>Bun server pattern</title>
+    <link href="https://example.com/bun-server" rel="alternate" />
+    <updated>2026-05-04T19:00:00Z</updated>
+    <summary>React SSR with a small Bun server.</summary>
+  </entry>
+</feed>

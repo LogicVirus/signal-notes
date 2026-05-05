@@ -11,6 +11,7 @@ import {
   validateContent
 } from "./content";
 import type { PublicSignal } from "./content/types";
+import { appBaseUrl, normalizeBasePath, stripBasePath, withBasePath, withoutTrailingSlash } from "./paths";
 import { renderDocument } from "./render";
 import { matchRoute } from "./router";
 import { getFeedSignals, type FetchLike } from "./services/feed-service";
@@ -19,6 +20,7 @@ import { HomePage, MaterialsPage, NotFoundPage, SignalPage, SourcesPage, TopicPa
 
 type RequestHandlerOptions = {
   siteUrl?: string;
+  basePath?: string;
   includeFeeds?: boolean;
   feedFetcher?: FetchLike;
 };
@@ -39,11 +41,25 @@ const assetTypes = new Map([
 
 export function createRequestHandler(options: RequestHandlerOptions = {}) {
   const siteUrl = withoutTrailingSlash(options.siteUrl ?? process.env.SITE_URL ?? "http://localhost:3001");
+  const basePath = normalizeBasePath(options.basePath ?? process.env.BASE_PATH);
   const includeFeeds = options.includeFeeds ?? process.env.DISABLE_FEEDS !== "1";
 
   return async function handleRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const route = matchRoute(url.pathname);
+    const appPath = stripBasePath(url.pathname, basePath);
+
+    if (!appPath) {
+      if (basePath && url.pathname === "/") {
+        const redirectUrl = new URL(request.url);
+        redirectUrl.pathname = basePath;
+
+        return Response.redirect(redirectUrl, 308);
+      }
+
+      return notFound(siteUrl, basePath, url.pathname);
+    }
+
+    const route = matchRoute(appPath);
 
     if (route.name === "asset") {
       return serveAsset(route.path);
@@ -76,7 +92,7 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
 
     if (route.name === "feed") {
       const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
-      return new Response(renderRss(signalSet.signals, siteUrl), {
+      return new Response(renderRss(signalSet.signals, appBaseUrl(siteUrl, basePath)), {
         headers: {
           "content-type": "application/rss+xml; charset=utf-8",
           "cache-control": "public, max-age=300"
@@ -100,7 +116,8 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
             description:
               "A public index of tools, AI workflows, source trails, material quality stats, and leading-edge indicators.",
             path: "/",
-            siteUrl
+            siteUrl,
+            basePath
           }
         )
       );
@@ -113,7 +130,8 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
           title: "Topics",
           description: "Browse Signal Notes by topic: AI workflows, developer tools, web stack, and source trails.",
           path: "/topics",
-          siteUrl
+          siteUrl,
+          basePath
         })
       );
     }
@@ -133,7 +151,8 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
             title: "Materials",
             description: "Material quality stats, watch materials, source trails, and leading-edge indicators.",
             path: "/materials",
-            siteUrl
+            siteUrl,
+            basePath
           }
         )
       );
@@ -143,7 +162,7 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
       const topic = getTopic(route.slug);
 
       if (!topic) {
-        return notFound(siteUrl, url.pathname);
+        return notFound(siteUrl, basePath, appPath);
       }
 
       const signalSet = await collectSignals({ includeFeeds, feedFetcher: options.feedFetcher });
@@ -154,7 +173,8 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
           title: topic.name,
           description: topic.summary,
           path: `/topics/${topic.slug}`,
-          siteUrl
+          siteUrl,
+          basePath
         })
       );
     }
@@ -163,7 +183,7 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
       const signal = getSignal(route.slug);
 
       if (!signal) {
-        return notFound(siteUrl, url.pathname);
+        return notFound(siteUrl, basePath, appPath);
       }
 
       return htmlResponse(
@@ -171,7 +191,8 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
           title: signal.title,
           description: signal.summary,
           path: `/signals/${signal.slug}`,
-          siteUrl
+          siteUrl,
+          basePath
         })
       );
     }
@@ -182,12 +203,13 @@ export function createRequestHandler(options: RequestHandlerOptions = {}) {
           title: "Sources",
           description: "The primary docs, feeds, and sites behind Signal Notes.",
           path: "/sources",
-          siteUrl
+          siteUrl,
+          basePath
         })
       );
     }
 
-    return notFound(siteUrl, url.pathname);
+    return notFound(siteUrl, basePath, appPath);
   };
 }
 
@@ -201,6 +223,7 @@ export function createServer(options: ServerOptions = {}) {
   const port = options.port ?? Number(process.env.PORT ?? 3001);
   const handler = createRequestHandler({
     siteUrl: options.siteUrl ?? process.env.SITE_URL ?? `http://localhost:${port}`,
+    basePath: options.basePath ?? process.env.BASE_PATH,
     includeFeeds: options.includeFeeds,
     feedFetcher: options.feedFetcher
   });
@@ -217,7 +240,7 @@ export function createServer(options: ServerOptions = {}) {
   });
 
   if (options.log ?? true) {
-    console.log(`Signal Notes listening on http://${server.hostname}:${server.port}`);
+    console.log(`Signal Notes listening on http://${server.hostname}:${server.port}${withBasePath("/", normalizeBasePath(options.basePath ?? process.env.BASE_PATH))}`);
   }
 
   return server;
@@ -267,13 +290,14 @@ function serveAsset(pathname: string): Response {
   });
 }
 
-function notFound(siteUrl: string, path: string): Response {
+function notFound(siteUrl: string, basePath: string, path: string): Response {
   return htmlResponse(
     renderDocument(<NotFoundPage />, {
       title: "Not found",
       description: "This Signal Notes page could not be found.",
       path,
-      siteUrl
+      siteUrl,
+      basePath
     }),
     404
   );
@@ -295,10 +319,6 @@ function jsonResponse(value: unknown): Response {
       "cache-control": "public, max-age=120"
     }
   });
-}
-
-function withoutTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value.slice(0, -1) : value;
 }
 
 if (import.meta.main) {

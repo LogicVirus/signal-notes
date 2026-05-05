@@ -72,6 +72,32 @@ describe("public server routes", () => {
     expect(response.headers.get("content-type")).toBe("image/png");
   });
 
+  test("mounts every public surface below a configured base path", async () => {
+    const handler = createRequestHandler({
+      siteUrl,
+      basePath: "/signal-notes",
+      includeFeeds: false
+    });
+    const response = await request("/signal-notes/materials", handler);
+    const html = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(html).toContain("Material quality signals");
+    expect(html).toContain(`<link rel="canonical" href="${siteUrl}/signal-notes/materials"`);
+    expect(html).toContain(`href="/signal-notes/topics"`);
+    expect(html).toContain(`href="/signal-notes/api/material-quality.json"`);
+
+    const apiResponse = await request("/signal-notes/api/material-quality.json", handler);
+    const json = await apiResponse.json();
+
+    expect(apiResponse.status).toBe(200);
+    expect(json.site).toBe("Signal Notes");
+
+    const assetResponse = await request("/signal-notes/styles.css", handler);
+    expect(assetResponse.status).toBe(200);
+    expect(assetResponse.headers.get("content-type")).toContain("text/css");
+  });
+
   test("returns 404 for unknown paths", async () => {
     const response = await request("/missing");
     const html = await response.text();

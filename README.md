@@ -36,6 +36,14 @@ bun run typecheck
 
 The dev server defaults to [http://localhost:3001](http://localhost:3001) so it can run beside the SpaceStatic site on `localhost:3000`. Set `PORT` or `SITE_URL` in the environment to override the local port or canonical URL.
 
+When Signal Notes is mounted under SpaceStatic Info, run it with a base path:
+
+```bash
+SITE_URL=https://spacestatic.info BASE_PATH=/signal-notes bun run start
+```
+
+With `BASE_PATH=/signal-notes`, pages, assets, JSON, and RSS are served below `/signal-notes/*` so `spacestatic.info/signal-notes/materials`, `spacestatic.info/signal-notes/api/material-quality.json`, and the rest of the app share the same public subtree.
+
 ## Routes
 
 - `/`

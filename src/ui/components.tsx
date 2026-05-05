@@ -1,5 +1,7 @@
+import { createContext, useContext } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { MaterialQualityIndicator, PublicSignal, Source, Topic, TrackedMaterial } from "../content/types";
+import { withBasePath } from "../paths";
 
 const dateFormatter = new Intl.DateTimeFormat("en", {
   month: "short",
@@ -7,27 +9,33 @@ const dateFormatter = new Intl.DateTimeFormat("en", {
   year: "numeric"
 });
 
-export function PageShell({ children }: { children: ReactNode }) {
+const BasePathContext = createContext("");
+
+export function PageShell({ children, basePath = "" }: { children: ReactNode; basePath?: string }) {
+  const appPath = (pathname: string) => withBasePath(pathname, basePath);
+
   return (
-    <div className="site-shell">
-      <header className="site-header" data-testid="site-header">
-        <a className="brand" href="/" aria-label="Signal Notes home">
-          <span className="brand-mark" aria-hidden="true" />
+    <BasePathContext.Provider value={basePath}>
+      <div className="site-shell">
+        <header className="site-header" data-testid="site-header">
+          <a className="brand" href={appPath("/")} aria-label="Signal Notes home">
+            <span className="brand-mark" aria-hidden="true" />
+            <span>Signal Notes</span>
+          </a>
+          <nav className="site-nav" aria-label="Primary navigation">
+            <a href={appPath("/materials")}>Materials</a>
+            <a href={appPath("/topics")}>Topics</a>
+            <a href={appPath("/sources")}>Sources</a>
+            <a href={appPath("/feed.xml")}>RSS</a>
+          </nav>
+        </header>
+        <main>{children}</main>
+        <footer className="site-footer">
           <span>Signal Notes</span>
-        </a>
-        <nav className="site-nav" aria-label="Primary navigation">
-          <a href="/materials">Materials</a>
-          <a href="/topics">Topics</a>
-          <a href="/sources">Sources</a>
-          <a href="/feed.xml">RSS</a>
-        </nav>
-      </header>
-      <main>{children}</main>
-      <footer className="site-footer">
-        <span>Signal Notes</span>
-        <span>Public notes on tools, AI workflows, and useful source trails.</span>
-      </footer>
-    </div>
+          <span>Public notes on tools, AI workflows, and useful source trails.</span>
+        </footer>
+      </div>
+    </BasePathContext.Provider>
   );
 }
 
@@ -44,6 +52,7 @@ export function HomePage({
   materials: TrackedMaterial[];
   feedErrors: string[];
 }) {
+  const appPath = useAppPath();
   const featured = signals.filter((signal) => signal.featured).slice(0, 3);
   const watchCount = indicators.filter((indicator) => indicator.status !== "stable").length;
 
@@ -64,7 +73,7 @@ export function HomePage({
         </div>
         <img
           className="signal-visual"
-          src="/signal-notes-og.png"
+          src={appPath("/signal-notes-og.png")}
           alt="Signal Notes visual index board"
           width="1200"
           height="630"
@@ -84,7 +93,7 @@ export function HomePage({
             <IndicatorMini indicator={indicator} key={indicator.slug} />
           ))}
         </div>
-        <a className="source-link" href="/materials">
+        <a className="source-link" href={appPath("/materials")}>
           Open materials tracker
         </a>
         <p className="preview-note">{materials.length} material families are in the starter watchlist.</p>
@@ -171,6 +180,7 @@ export function MaterialsPage({
   signals: PublicSignal[];
   feedErrors: string[];
 }) {
+  const appPath = useAppPath();
   const riskCount = indicators.filter((indicator) => indicator.status === "risk").length;
   const watchCount = indicators.filter((indicator) => indicator.status === "watch").length;
   const stableCount = indicators.filter((indicator) => indicator.status === "stable").length;
@@ -215,7 +225,7 @@ export function MaterialsPage({
             <p className="eyebrow">Leading indicators</p>
             <h2 id="indicator-title">Quality stats to watch</h2>
           </div>
-          <a className="source-link" href="/api/material-quality.json">
+          <a className="source-link" href={appPath("/api/material-quality.json")}>
             JSON endpoint
           </a>
         </div>
@@ -258,6 +268,8 @@ export function MaterialsPage({
 }
 
 export function TopicsPage({ topics, signals }: { topics: Topic[]; signals: PublicSignal[] }) {
+  const appPath = useAppPath();
+
   return (
     <section className="page-section" aria-labelledby="topics-title">
       <p className="eyebrow">Topic map</p>
@@ -268,7 +280,7 @@ export function TopicsPage({ topics, signals }: { topics: Topic[]; signals: Publ
 
           return (
             <article className="topic-card" key={topic.slug} style={{ "--accent": topic.accent } as CSSProperties}>
-              <a href={`/topics/${topic.slug}`}>
+              <a href={appPath(`/topics/${topic.slug}`)}>
                 <span className="topic-dot" aria-hidden="true" />
                 <h2>{topic.name}</h2>
                 <p>{topic.summary}</p>
@@ -298,9 +310,11 @@ export function TopicPage({ topic, signals }: { topic: Topic; signals: PublicSig
 }
 
 export function SignalPage({ signal }: { signal: PublicSignal }) {
+  const appPath = useAppPath();
+
   return (
     <article className="article-page" aria-labelledby="signal-title">
-      <a className="back-link" href="/">
+      <a className="back-link" href={appPath("/")}>
         Back to signals
       </a>
       <p className="eyebrow">{signal.kind}</p>
@@ -351,12 +365,14 @@ export function SourcesPage({ sources }: { sources: Source[] }) {
 }
 
 export function NotFoundPage() {
+  const appPath = useAppPath();
+
   return (
     <section className="page-section" aria-labelledby="not-found-title">
       <p className="eyebrow">404</p>
       <h1 id="not-found-title">This signal is not in the index.</h1>
       <p className="lede constrained">The route may be mistyped, or the note may not exist yet.</p>
-      <a className="source-link" href="/">
+      <a className="source-link" href={appPath("/")}>
         Return home
       </a>
     </section>
@@ -364,7 +380,8 @@ export function NotFoundPage() {
 }
 
 function SignalCard({ signal, compact = false }: { signal: PublicSignal; compact?: boolean }) {
-  const href = signal.origin === "manual" ? `/signals/${signal.slug}` : signal.url ?? "/";
+  const appPath = useAppPath();
+  const href = signal.origin === "manual" ? appPath(`/signals/${signal.slug}`) : signal.url ?? appPath("/");
 
   return (
     <article
@@ -487,11 +504,19 @@ function StatusPill({ label, value, status }: { label: string; value: number; st
 }
 
 function TopicBadge({ topic }: { topic: Topic }) {
+  const appPath = useAppPath();
+
   return (
-    <a className="topic-badge" href={`/topics/${topic.slug}`} style={{ "--accent": topic.accent } as CSSProperties}>
+    <a className="topic-badge" href={appPath(`/topics/${topic.slug}`)} style={{ "--accent": topic.accent } as CSSProperties}>
       {topic.name}
     </a>
   );
+}
+
+function useAppPath() {
+  const basePath = useContext(BasePathContext);
+
+  return (pathname: string) => withBasePath(pathname, basePath);
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
